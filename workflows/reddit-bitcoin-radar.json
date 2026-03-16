@@ -1,0 +1,143 @@
+{
+  "name": "Reddit Bitcoin Radar",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24
+            }
+          ],
+          "startTime": "08:00"
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 300],
+      "webhookId": "reddit-bitcoin-radar"
+    },
+    {
+      "parameters": {
+        "url": "https://www.reddit.com/r/Bitcoin/top.json?limit=10&t=day",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "http-reddit",
+      "name": "Reddit API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Reddit API Response Parser\n// RULES.md: Formato Estricto n8n - array de objetos bajo clave 'json'\n// RULES.md: Defensa JSON - Optional Chaining\n\ntry {\n  const redditData = $input.first().json.data;\n  \n  if (!redditData?.children || redditData.children.length === 0) {\n    return [{ json: { posts: [], message: 'No posts found' } }];\n  }\n  \n  const posts = redditData.children.map(child => {\n    const post = child.data || {};\n    return {\n      json: {\n        title: post.title || '',\n        upvotes: post.ups || 0,\n        url: post.url || '',\n        permalink: `https://reddit.com${post.permalink || ''}`,\n        author: post.author || 'Unknown',\n        subreddit: post.subreddit || 'Bitcoin',\n        created_utc: post.created_utc || 0,\n        num_comments: post.num_comments || 0,\n        selftext: post.selftext?.substring(0, 500) || ''\n      }\n    };\n  });\n  \n  return posts;\n  \n} catch (error) {\n  // RULES.md: Defensa JSON - try/catch\n  return [{ json: { error: error.message, posts: [] } }];\n}"
+      },
+      "id": "code-parser",
+      "name": "Parse Reddit Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "model": {
+          "model": "gemini-2.0-flash"
+        },
+        "messages": {
+          "messages": [
+            {
+              "role": "system",
+              "content": "Eres un asistente que resume posts de Reddit de Bitcoin. Crea un resumen conciso de los 5 posts más importantes. Formato:\n\n📈 **Top Posts de r/Bitcoin**\n\n1. **{título}**\n   👍 upvotes | 💬 comentarios\n   📝 Resumen breve\n\nIncluye solo información relevante para inversores/entusiastas de Bitcoin."
+            },
+            {
+              "role": "user",
+              "content": "={{ $json.posts }}"
+            }
+          ]
+        },
+        "options": {
+          "maxTokens": 1000
+        }
+      },
+      "id": "ai-summarize",
+      "name": "AI Summarize",
+      "type": "n8n-nodes-base.aiAgent",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "TU_CHAT_ID_AQUI",
+        "text": "={{ $json.content }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "telegram",
+      "name": "Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1050, 300]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Reddit API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reddit API": {
+      "main": [
+        [
+          {
+            "node": "Parse Reddit Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Reddit Data": {
+      "main": [
+        [
+          {
+            "node": "AI Summarize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Summarize": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2026-03-15T23:30:00.000Z",
+  "versionId": "1"
+}

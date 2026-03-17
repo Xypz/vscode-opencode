@@ -6,121 +6,353 @@
         "rule": {
           "interval": [
             {
-              "field": "hours",
-              "hoursInterval": 24
+              "field": "cronExpression",
+              "expression": "0 22 * * *"
             }
-          ],
-          "startTime": "08:00"
+          ]
         }
       },
-      "id": "schedule-trigger",
+      "id": "n1",
       "name": "Schedule Trigger",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.1,
-      "position": [250, 300],
-      "webhookId": "reddit-bitcoin-radar"
+      "position": [
+        256,
+        304
+      ]
     },
     {
       "parameters": {
-        "url": "https://www.reddit.com/r/Bitcoin/top.json?limit=10&t=day",
-        "options": {
-          "timeout": 10000
-        }
+        "url": "https://www.reddit.com/r/btc/top.json?limit=5&t=day",
+        "options": {}
       },
-      "id": "http-reddit",
-      "name": "Reddit API",
+      "id": "n2a",
+      "name": "Reddit API - btc",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [450, 300]
+      "typeVersion": 4,
+      "position": [
+        464,
+        208
+      ]
     },
     {
       "parameters": {
-        "jsCode": "// Reddit API Response Parser\n// RULES.md: Formato Estricto n8n - array de objetos bajo clave 'json'\n// RULES.md: Defensa JSON - Optional Chaining\n\ntry {\n  const redditData = $input.first().json.data;\n  \n  if (!redditData?.children || redditData.children.length === 0) {\n    return [{ json: { posts: [], message: 'No posts found' } }];\n  }\n  \n  const posts = redditData.children.map(child => {\n    const post = child.data || {};\n    return {\n      json: {\n        title: post.title || '',\n        upvotes: post.ups || 0,\n        url: post.url || '',\n        permalink: `https://reddit.com${post.permalink || ''}`,\n        author: post.author || 'Unknown',\n        subreddit: post.subreddit || 'Bitcoin',\n        created_utc: post.created_utc || 0,\n        num_comments: post.num_comments || 0,\n        selftext: post.selftext?.substring(0, 500) || ''\n      }\n    };\n  });\n  \n  return posts;\n  \n} catch (error) {\n  // RULES.md: Defensa JSON - try/catch\n  return [{ json: { error: error.message, posts: [] } }];\n}"
+        "url": "https://www.reddit.com/r/Bitcoin/top.json?limit=5&t=day",
+        "options": {}
       },
-      "id": "code-parser",
-      "name": "Parse Reddit Data",
+      "id": "n2b",
+      "name": "Reddit API - Bitcoin",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        464,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const redditData = $input.first().json.data;\nconst posts = redditData?.children?.map(child => ({\n  subreddit: child.data?.subreddit || \"btc\",\n  title: child.data?.title,\n  upvotes: child.data?.ups,\n  url: child.data?.url,\n  permalink: `https://reddit.com${child.data?.permalink}`,\n  author: child.data?.author,\n  num_comments: child.data?.num_comments,\n  selftext: child.data?.selftext?.substring(0, 300) || \"\"\n})) || [];\nreturn posts.map(p => ({ json: p }));"
+      },
+      "id": "n3",
+      "name": "Parse btc",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [650, 300]
+      "position": [
+        656,
+        208
+      ]
     },
     {
       "parameters": {
-        "model": {
-          "model": "gemini-2.0-flash"
-        },
-        "messages": {
-          "messages": [
-            {
-              "role": "system",
-              "content": "Eres un asistente que resume posts de Reddit de Bitcoin. Crea un resumen conciso de los 5 posts más importantes. Formato:\n\n📈 **Top Posts de r/Bitcoin**\n\n1. **{título}**\n   👍 upvotes | 💬 comentarios\n   📝 Resumen breve\n\nIncluye solo información relevante para inversores/entusiastas de Bitcoin."
-            },
-            {
-              "role": "user",
-              "content": "={{ $json.posts }}"
-            }
-          ]
-        },
-        "options": {
-          "maxTokens": 1000
-        }
+        "jsCode": "const redditData = $input.first().json.data;\nconst posts = redditData?.children?.map(child => ({\n  subreddit: child.data?.subreddit || \"Bitcoin\",\n  title: child.data?.title,\n  upvotes: child.data?.ups,\n  url: child.data?.url,\n  permalink: `https://reddit.com${child.data?.permalink}`,\n  author: child.data?.author,\n  num_comments: child.data?.num_comments,\n  selftext: child.data?.selftext?.substring(0, 300) || \"\"\n})) || [];\nreturn posts.map(p => ({ json: p }));"
       },
-      "id": "ai-summarize",
-      "name": "AI Summarize",
-      "type": "n8n-nodes-base.aiAgent",
-      "typeVersion": 1,
-      "position": [850, 300]
+      "id": "n3b",
+      "name": "Parse Bitcoin",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        512
+      ]
     },
     {
       "parameters": {
-        "operation": "sendMessage",
-        "chatId": "TU_CHAT_ID_AQUI",
+        "operation": "aggregateItems",
+        "aggregate": "aggregateAllItemData"
+      },
+      "id": "n4",
+      "name": "Aggregate btc",
+      "type": "n8n-nodes-base.itemLists",
+      "typeVersion": 1,
+      "position": [
+        864,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "aggregateItems",
+        "aggregate": "aggregateAllItemData"
+      },
+      "id": "n4b",
+      "name": "Aggregate Bitcoin",
+      "type": "n8n-nodes-base.itemLists",
+      "typeVersion": 1,
+      "position": [
+        864,
+        512
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "n5",
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        1072,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Flatten y obtener top 5\nconst allPosts = [];\n\n$input.all().forEach(item => {\n  if (Array.isArray(item.json)) {\n    allPosts.push(...item.json);\n  } else {\n    allPosts.push(item.json);\n  }\n});\n\nconst sorted = allPosts.sort((a, b) => (b.upvotes || 0) - (a.upvotes || 0));\nconst top5 = sorted.slice(0, 5);\n\nreturn top5.map(post => ({ json: post }));"
+      },
+      "id": "n6",
+      "name": "Select Top 5",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1280,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const posts = $input.all();\n\nlet prompt = \"Resume los 5 posts más virales de r/btc y r/Bitcoin de las últimas 24 horas. Proporciona un resumen en ESPAÑOL conciso de máximo 5 puntos, destacando los temas más importantes para inversores de Bitcoin.\\n\\n\";\n\nposts.forEach((item, index) => {\n  const p = item.json;\n  prompt += `${index + 1}. [r/${p.subreddit}] ${p.title}\\n`;\n  prompt += `   Upvotes: ${p.upvotes} | Comentarios: ${p.num_comments}\\n`;\n  if (p.selftext) prompt += `   Contenido: ${p.selftext}\\n`;\n  prompt += \"\\n\";\n});\n\nprompt += \"\\nIMPORTANTE: Responde siempre en español.\";\n\nreturn { json: { prompt: prompt } };"
+      },
+      "id": "n7",
+      "name": "Prepare Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1488,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "model": "deepseek/deepseek-r1-distill-llama-70b",
+        "options": {}
+      },
+      "id": "n8",
+      "name": "OpenRouter Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        1728,
+        560
+      ],
+      "credentials": {
+        "openRouterApi": {
+          "id": "OyQzAWXSBTIUwfwp",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.prompt }}",
+        "options": {}
+      },
+      "id": "n9",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        1728,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const summary = $input.first().json.output || $input.first().json.text || \"No se pudo generar resumen\";\n\nlet message = \"📈 *Resumen Bitcoin - últimas 24h*\\n\\n\";\nmessage += \"Top 5 posts de r/btc + r/Bitcoin\\n\\n\";\nmessage += `${summary}\\n\\n`;\nmessage += \"_Resumen en español - Powered by DeepSeek (OpenRouter)_\";\n\nreturn { json: { content: message } };"
+      },
+      "id": "n10",
+      "name": "Format Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2096,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "6822665740",
         "text": "={{ $json.content }}",
         "additionalFields": {
           "parse_mode": "Markdown"
         }
       },
-      "id": "telegram",
+      "id": "n11",
       "name": "Telegram",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
-      "position": [1050, 300]
+      "position": [
+        2288,
+        368
+      ],
+      "webhookId": "083474d3-1f02-4cee-ac29-cd371745edd4",
+      "credentials": {
+        "telegramApi": {
+          "id": "7uUcx2C35EQZFpkS",
+          "name": "Telegram Personal"
+        }
+      }
     }
   ],
+  "pinData": {},
   "connections": {
     "Schedule Trigger": {
       "main": [
         [
           {
-            "node": "Reddit API",
+            "node": "Reddit API - btc",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Reddit API - Bitcoin",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Reddit API": {
+    "Reddit API - btc": {
       "main": [
         [
           {
-            "node": "Parse Reddit Data",
+            "node": "Parse btc",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Parse Reddit Data": {
+    "Reddit API - Bitcoin": {
       "main": [
         [
           {
-            "node": "AI Summarize",
+            "node": "Parse Bitcoin",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "AI Summarize": {
+    "Parse btc": {
+      "main": [
+        [
+          {
+            "node": "Aggregate btc",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Bitcoin": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Bitcoin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate btc": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Bitcoin": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Select Top 5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select Top 5": {
+      "main": [
+        [
+          {
+            "node": "Prepare Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Prompt": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Format Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Message": {
       "main": [
         [
           {
@@ -132,12 +364,17 @@
       ]
     }
   },
+  "active": false,
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "availableInMCP": false,
+    "timezone": "Europe/Madrid"
   },
-  "staticData": null,
-  "tags": [],
-  "triggerCount": 1,
-  "updatedAt": "2026-03-15T23:30:00.000Z",
-  "versionId": "1"
+  "versionId": "463d570d-ea18-48f8-a634-63621259d7dd",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2f7d978a68144d80706c24db4d02157b5aed1db8346ae16dc7360c37518e1f7b"
+  },
+  "id": "MwAj48shqZNFSQFn",
+  "tags": []
 }

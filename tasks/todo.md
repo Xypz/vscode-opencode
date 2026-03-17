@@ -10,8 +10,8 @@
 - [x] **Tarea 2 (Importar/Crear):** Creado workflow desde cero basado en template #10246 (Reddit digests + Gemini)
 - [x] **Tarea 3 (Credenciales):** Preparado para configuración nativa (RULES.md punto 78)
 - [x] **Tarea 4 (Personalizar):** 
-  - Trigger: Schedule (diario 08:00)
-  - Subreddit: Bitcoin
+  - Trigger: Schedule (diario 21:00 UTC = 22:00 España)
+  - Subreddit: Bitcoin + btc
   - Filtros: top.json con t=day
 
 ---

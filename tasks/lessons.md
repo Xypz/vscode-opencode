@@ -90,6 +90,49 @@
 
 ---
 
+### 2026-03-16 (Merge de dos APIs en paralelo)
+
+**Proyecto:** Reddit Bitcoin Radar - Merge /btc + /Bitcoin
+
+**Problema:** 
+- n8n ejecuta cada rama en paralelo, causando que el Merge reciba datos de forma incorrecta
+- Los nodos Parse devolvían 5 items separados por cada subreddit
+- El Merge se ejecutaba antes de recibir todos los datos
+
+**Solución:**
+1. **Nodo Aggregate**: Usar la configuración correcta para agrupar items:
+   ```json
+   {
+     "operation": "aggregateItems",
+     "aggregate": "aggregateAllItemData"
+   }
+   ```
+2. **Conexiones del Merge**: Conectar cada rama a un input diferente:
+   - "Aggregate btc" → Merge input index 0
+   - "Aggregate Bitcoin" → Merge input index 1
+   ```json
+   "Aggregate btc": {
+     "main": [[{"node": "Merge", "type": "main", "index": 0}]]
+   },
+   "Aggregate Bitcoin": {
+     "main": [[{"node": "Merge", "type": "main", "index": 1}]]
+   }
+   ```
+
+**Estructura correcta del flujo:**
+```
+Schedule Trigger → [Reddit API - btc → Parse btc → Aggregate btc] ─┐
+                                                               ├→ Merge → Select Top 5
+Schedule Trigger → [Reddit API - Bitcoin → Parse Bitcoin → Aggregate Bitcoin] ─┘
+```
+
+**Regla creada:**
+- Para merge en paralelo: usar nodo Item Lists con operation="aggregateItems"
+- NO usar "aggregate" con "type": "adjacent" - no funciona igual
+- Especificar explícitamente el índice de input en las conexiones del Merge (index: 0, index: 1)
+
+---
+
 ### YYYY-MM-DD
 
 **Problema:** _Describe el error_

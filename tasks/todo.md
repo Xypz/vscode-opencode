@@ -1,57 +1,54 @@
-# 📋 Reddit Bitcoin Radar - Implementación
+# 📋 Reddit Bitcoin Radar
 
-## ✅ Estado: Completado
+## ✅ Estado: Activo en producción
 
 ---
 
 ## 🎯 Tareas Completadas
 
-- [x] **Tarea 1 (Investigación):** Encontrados 3+ templates en awesome-n8n-templates
-- [x] **Tarea 2 (Importar/Crear):** Creado workflow desde cero basado en template #10246 (Reddit digests + Gemini)
-- [x] **Tarea 3 (Credenciales):** Preparado para configuración nativa (RULES.md punto 78)
-- [x] **Tarea 4 (Personalizar):** 
-  - Trigger: Schedule (diario 21:00 UTC = 22:00 España)
-  - Subreddit: Bitcoin + btc
-  - Filtros: top.json con t=day
+- [x] Investigación y creación del workflow base
+- [x] Integración de dos subreddits (r/btc + r/Bitcoin) en paralelo con Merge
+- [x] Fix bug en nodo `Select Top 5` (Aggregate genera `{data:[...]}`, no array directo)
+- [x] Añadido User-Agent en HTTP requests a Reddit (evita bloqueos 403/429)
+- [x] Reemplazado Schedule Trigger → Webhook (fiabilidad con macOS durmiendo)
+- [x] Configurado Cloudflare Tunnel (`n8n.hellonode.es`) como dominio permanente
+- [x] Configurado cron-job.org para disparar el webhook a las 22:00 Europe/Madrid
+- [x] Importado workflow `shixin-technology` recuperado
 
 ---
 
-## 📁 Archivos Creados
+## 📁 Archivos
 
 ```
 workflows/
-├── reddit-bitcoin-radar.json   # Workflow para importar
-└── README.md                   # Instrucciones
+├── reddit-bitcoin-radar.json       # Workflow activo (con todos los fixes)
+├── workflow-produccion-final.json  # shixin-technology (importado en n8n)
+└── README.md                       # Documentación actualizada
 ```
 
 ---
 
-## 🔑 Credenciales Requeridas
+## 🔑 Credenciales en n8n
 
-| Servicio | Tipo | Costo |
-|----------|------|-------|
-| Reddit | API pública (.json) | ✅ Gratis |
-| Telegram | Bot Token | ✅ Gratis |
-| Gemini | API Key | ✅ Free tier |
-
----
-
-## 📝 Próximos Pasos (Usuario)
-
-1. Importar `reddit-bitcoin-radar.json` en n8n
-2. Configurar credenciales de Telegram y Gemini
-3. Obtener Chat ID de Telegram
-4. Testear ejecución manual
-5. Activar workflow
+| Servicio | Tipo | Estado |
+|----------|------|--------|
+| Telegram | telegramApi | ✅ Configurada |
+| OpenRouter | openRouterApi | ✅ Configurada |
 
 ---
 
-## 📊 Revisión
+## 🌐 Infraestructura
 
-Workflow creado siguiendo RULES.md:
-- ✅ Modo planificación primero
-- ✅ Investigación en repositorios (awesome-n8n-templates)
-- ✅ Formato JSON nativo n8n
-- ✅ JavaScript defensivo (try/catch, optional chaining)
-- ✅ CERO secretos hardcodeados
-- ✅ Credenciales nativas de n8n
+| Componente | Detalle |
+|---|---|
+| n8n URL pública | https://n8n.hellonode.es |
+| n8n URL local | https://n8n_tunnel.orb.local |
+| Cloudflare Tunnel | `n8n` (LaunchAgent, arranca con sesión) |
+| Cron externo | cron-job.org → 22:00 Europe/Madrid |
+| Workflow ID (n8n) | 6vfSuqjJrRo3egfX |
+
+---
+
+## ⚠️ Pendiente
+
+- [ ] Asignar credenciales en `shixin-technology` (Telegram + OpenRouter)

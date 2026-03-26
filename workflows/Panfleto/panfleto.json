@@ -1,0 +1,186 @@
+{
+  "name": "Panfleto",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      },
+      "id": "pnfl-0001-0000-0000-000000000001",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-1000, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const fuentes = [\n  { sector: 'Econom\u00eda',         subreddit: 'Economics' },\n  { sector: 'Noticias Espa\u00f1a',   subreddit: 'SpainPolitics' },\n  { sector: 'Bitcoin',           subreddit: 'Bitcoin' },\n  { sector: 'Tecnolog\u00eda',        subreddit: 'technology' },\n  { sector: 'IA',                subreddit: 'ChatGPT' },\n  { sector: 'Coches El\u00e9ctricos', subreddit: 'electricvehicles' },\n  { sector: 'Juegos',            subreddit: 'Games' },\n];\n\nreturn fuentes.map(f => ({\n  json: {\n    sector: f.sector,\n    url: `https://www.reddit.com/r/${f.subreddit}/top.json?t=day&limit=5`,\n  }\n}));"
+      },
+      "id": "pnfl-0002-0000-0000-000000000002",
+      "name": "Code - Inicializador",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-800, 200]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {
+          "headers": {
+            "parameters": [
+              { "name": "User-Agent", "value": "n8n-panfleto/1.0" }
+            ]
+          }
+        }
+      },
+      "id": "pnfl-0003-0000-0000-000000000003",
+      "name": "HTTP - Reddit",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-600, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = [];\n\nfor (const item of $input.all()) {\n  const sector = item.json.sector;\n  const children = item.json.data?.children || [];\n\n  // Filtra posts de solo texto y fijados, toma los 2 mejores\n  const filtered = children\n    .filter(c => !c.data?.is_self && !c.data?.stickied)\n    .slice(0, 2);\n\n  for (const child of filtered) {\n    const d = child.data;\n    let image = null;\n\n    if (d.preview?.images?.[0]?.source?.url) {\n      image = d.preview.images[0].source.url.replace(/&amp;/g, '&');\n    } else if (d.thumbnail && d.thumbnail.startsWith('http')) {\n      image = d.thumbnail;\n    }\n\n    result.push({\n      json: {\n        sector,\n        title:        d.title,\n        url:          d.url,\n        image,\n        post_id:   d.id,\n        subreddit: d.subreddit,\n      }\n    });\n  }\n}\n\nreturn result;"
+      },
+      "id": "pnfl-0004-0000-0000-000000000004",
+      "name": "Code - Procesador",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-400, 200]
+    },
+    {
+      "parameters": {
+        "url": "={{ \"https://r.jina.ai/\" + encodeURIComponent($json.url) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text",
+              "neverError": true
+            }
+          },
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 3000
+            }
+          }
+        }
+      },
+      "id": "pnfl-0005-0000-0000-000000000005",
+      "name": "HTTP - Jina AI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-200, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extrae el texto del articulo con 5 niveles de fallback:\n// 1. Jina AI  →  2. Firecrawl  →  3. ScrapingBee  →  4. Fetch Chrome  →  5. Comentarios Reddit\n//\n// Claves de API leidas desde variables de entorno de n8n.\n// Añadelas en tu docker con: -e FIRECRAWL_API_KEY=fc-xxx -e SCRAPINGBEE_API_KEY=xxx\nconst FIRECRAWL_KEY   = process.env.FIRECRAWL_API_KEY   || '';\nconst SCRAPINGBEE_KEY = process.env.SCRAPINGBEE_API_KEY || '';\n\nconst jinaItems     = $input.all();\nconst originalItems = $('Code - Procesador').all();\nconst results       = [];\n\nconst BLOCKED = ['blocked', '451', 'legal', 'access denied', 'too many requests', 'ddos', 'unavailable'];\n\nfunction stripHtml(raw) {\n  return (typeof raw === 'string' ? raw : '')\n    .replace(/<script[\\s\\S]*?<\\/script>/gi, '')\n    .replace(/<style[\\s\\S]*?<\\/style>/gi, '')\n    .replace(/<[^>]+>/g, ' ')\n    .replace(/&nbsp;/g, ' ')\n    .replace(/\\s{2,}/g, ' ')\n    .trim();\n}\n\nfor (let i = 0; i < jinaItems.length; i++) {\n  const original = originalItems[i]?.json || {};\n  const rawJina  = jinaItems[i].json.data || jinaItems[i].json.body || '';\n\n  // --- Nivel 1: Jina AI ---\n  const jinaOk = !BLOCKED.some(kw => rawJina.toLowerCase().includes(kw)) && rawJina.length >= 80;\n  let articleText = jinaOk ? rawJina.substring(0, 2500) : '';\n  if (articleText) { results.push({ json: { ...original, article_text: articleText } }); continue; }\n\n  // --- Nivel 2: Firecrawl ---\n  if (FIRECRAWL_KEY) {\n    try {\n      const res = await $helpers.httpRequest({\n        method: 'POST',\n        url: 'https://api.firecrawl.dev/v1/scrape',\n        headers: { 'Authorization': `Bearer ${FIRECRAWL_KEY}`, 'Content-Type': 'application/json' },\n        body: JSON.stringify({ url: original.url, formats: ['markdown'] }),\n      });\n      const md = res?.data?.markdown || '';\n      if (md.length >= 80) articleText = md.substring(0, 2500);\n    } catch (e) {}\n  }\n  if (articleText) { results.push({ json: { ...original, article_text: articleText } }); continue; }\n\n  // --- Nivel 3: ScrapingBee ---\n  if (SCRAPINGBEE_KEY) {\n    try {\n      const html = await $helpers.httpRequest({\n        method: 'GET',\n        url: `https://app.scrapingbee.com/api/v1/?api_key=${SCRAPINGBEE_KEY}&url=${encodeURIComponent(original.url)}&render_js=false`,\n      });\n      const cleaned = stripHtml(html);\n      if (cleaned.length >= 80) articleText = cleaned.substring(0, 2500);\n    } catch (e) {}\n  }\n  if (articleText) { results.push({ json: { ...original, article_text: articleText } }); continue; }\n\n  // --- Nivel 4: Fetch directo con User-Agent de Chrome ---\n  try {\n    const html = await $helpers.httpRequest({\n      method: 'GET',\n      url: original.url,\n      headers: {\n        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',\n        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',\n        'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',\n      },\n    });\n    const cleaned = stripHtml(html);\n    if (cleaned.length >= 80) articleText = cleaned.substring(0, 2500);\n  } catch (e) {}\n  if (articleText) { results.push({ json: { ...original, article_text: articleText } }); continue; }\n\n  // --- Nivel 5: Comentarios del post en Reddit (nunca falla) ---\n  if (original.post_id && original.subreddit) {\n    try {\n      const data = await $helpers.httpRequest({\n        method: 'GET',\n        url: `https://www.reddit.com/r/${original.subreddit}/comments/${original.post_id}.json?limit=10&sort=top`,\n        headers: { 'User-Agent': 'n8n-panfleto/1.0' },\n      });\n      const lines = (data[1]?.data?.children || [])\n        .filter(c => c.kind === 't1' && c.data?.body && !['[deleted]','[removed]'].includes(c.data.body))\n        .slice(0, 5)\n        .map(c => `• ${c.data.body.substring(0, 300).replace(/\\n/g, ' ')}`);\n      if (lines.length > 0) articleText = '[Reacciones de la comunidad Reddit]\\n' + lines.join('\\n');\n    } catch (e) {}\n  }\n\n  results.push({ json: { ...original, article_text: articleText } });\n}\n\nreturn results;"
+      },
+      "id": "pnfl-0006-0000-0000-000000000006",
+      "name": "Code - Merge Jina",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [0, 200]
+    },
+    {
+      "parameters": {
+        "model": "deepseek/deepseek-r1-distill-llama-70b",
+        "options": {}
+      },
+      "id": "pnfl-0007-0000-0000-000000000007",
+      "name": "OpenRouter Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [200, 400],
+      "credentials": {
+        "openRouterApi": {
+          "id": "OyQzAWXSBTIUwfwp",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Titular de Reddit: ' + $json.title + '\\n\\nTexto extraído del artículo (Markdown):\\n' + $json.article_text }}",
+        "options": {
+          "systemMessage": "Eres el editor jefe de un newsletter en espa\u00f1ol. Tu \u00fanica lengua de salida es el ESPA\u00d1OL. NUNCA escribas en chino, ingl\u00e9s, ni ning\u00fan otro idioma.\nREGLAS ESTRICTAS:\n1. Devuelve \u00daNICA Y EXCLUSIVAMENTE un objeto JSON v\u00e1lido (sin markdown, sin texto extra, sin prefijos como 'json').\n2. El resumen debe contener exactamente 3 vi\u00f1etas (bullet points) de no m\u00e1s de 25 palabras cada una.\n3. Traduce TODO al espa\u00f1ol, sin importar el idioma del texto fuente.\n4. Si alguna frase del texto fuente est\u00e1 en chino, japon\u00e9s, \u00e1rabe o cualquier otro idioma, TR\u00c1DUCELA al espa\u00f1ol antes de usarla.\n5. PROHIBIDO mezclar idiomas. Cada car\u00e1cter de tu respuesta debe ser espa\u00f1ol o puntuaci\u00f3n/n\u00fameros.\nFORMATO DE SALIDA OBLIGATORIO:\n{\"titular_traducido\": \"Titular en espa\u00f1ol\", \"resumen_puntos\": [\"Punto 1 en espa\u00f1ol\", \"Punto 2 en espa\u00f1ol\", \"Punto 3 en espa\u00f1ol\"]}"
+        }
+      },
+      "id": "pnfl-0008-0000-0000-000000000008",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [200, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const aiItems = $input.all();\nconst originalItems = $('Code - Merge Jina').all();\nconst today = new Date();\nconst dateStr   = today.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });\nconst dateShort = today.toLocaleDateString('es-ES');\n\nconst icons = {\n  'Econom\u00eda':         '\ud83d\udcc8',\n  'Noticias Espa\u00f1a':   '\ud83c\uddea\ud83c\uddf8',\n  'Bitcoin':           '\u20bf',\n  'Tecnolog\u00eda':        '\ud83d\udcbb',\n  'IA':                '\ud83e\udd16',\n  'Coches El\u00e9ctricos': '\u26a1',\n  'Juegos':            '\ud83c\udfae',\n};\n\n// Agrupa por sector y parsea respuesta de la IA\nconst sectors = {};\nfor (let i = 0; i < aiItems.length; i++) {\n  const item = aiItems[i];\n  const orig = originalItems[i]?.json || {};\n  const { sector, title, url, image } = orig;\n  let parsed;\n  try {\n    let raw = item.json.output || item.json.text || '{}';\n    raw = raw.replace(/```json/g, '').replace(/```/g, '').trim();\n    parsed = JSON.parse(raw);\n  } catch(e) {\n    parsed = { titular_traducido: title, resumen_puntos: ['Resumen no disponible'] };\n  }\n  if (!sectors[sector]) sectors[sector] = [];\n  sectors[sector].push({\n    url,\n    image,\n    titular_traducido: parsed.titular_traducido || title,\n    resumen_puntos:    Array.isArray(parsed.resumen_puntos) ? parsed.resumen_puntos : [],\n  });\n}\n\n// Construye el HTML de cada sector\nlet sectorsHtml = '';\nfor (const [name, arts] of Object.entries(sectors)) {\n  const icon = icons[name] || '\ud83d\udcf0';\n  let artHtml = '';\n\n  for (const a of arts) {\n    const imgTag = a.image\n      ? `<img src='${a.image}' alt='' width='560' style='display:block;width:100%;height:220px;object-fit:cover;border-radius:12px 12px 0 0;' />`\n      : '';\n    const bullets = (a.resumen_puntos || []).map(p =>\n      `<li style='margin-bottom:8px;line-height:1.65;color:#374151;font-size:15px;'>${p}</li>`\n    ).join('');\n\n    artHtml += `<table role='presentation' width='100%' cellpadding='0' cellspacing='0' style='margin-bottom:20px;background:#ffffff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;'>\n  <tr><td>${imgTag}</td></tr>\n  <tr><td style='padding:24px;'>\n    <h3 style='margin:0 0 14px;font-size:18px;font-weight:700;color:#111827;line-height:1.4;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;'>${a.titular_traducido}</h3>\n    <ul style='margin:0 0 20px;padding-left:20px;'>${bullets}</ul>\n    <a href='${a.url}' style='display:inline-block;background:#111827;color:#ffffff;padding:11px 22px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;'>Leer m\u00e1s \u2192</a>\n  </td></tr>\n</table>`;\n  }\n\n  sectorsHtml += `<table role='presentation' width='100%' cellpadding='0' cellspacing='0' style='margin-bottom:36px;'>\n  <tr><td style='padding-bottom:12px;border-bottom:3px solid #111827;'>\n    <h2 style='margin:0;font-size:22px;font-weight:800;color:#111827;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;'>${icon} ${name}</h2>\n  </td></tr>\n  <tr><td style='height:18px;'></td></tr>\n  <tr><td>${artHtml}</td></tr>\n</table>`;\n}\n\nconst html = `<!DOCTYPE html>\n<html lang='es'>\n<head>\n<meta charset='UTF-8'>\n<meta name='viewport' content='width=device-width,initial-scale=1.0'>\n<title>Panfleto - ${dateShort}</title>\n</head>\n<body style='margin:0;padding:0;background-color:#f3f4f6;'>\n<table role='presentation' width='100%' cellpadding='0' cellspacing='0' bgcolor='#f3f4f6'>\n<tr><td align='center' style='padding:32px 16px;'>\n  <table role='presentation' width='600' cellpadding='0' cellspacing='0' style='max-width:600px;width:100%;'>\n\n    <tr>\n      <td style='background:#111827;border-radius:16px;padding:40px 32px;text-align:center;'>\n        <p style='margin:0;font-size:42px;line-height:1;'>\ud83d\udcf0</p>\n        <h1 style='margin:10px 0 0;font-size:36px;font-weight:900;color:#ffffff;letter-spacing:-1px;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;'>Panfleto</h1>\n        <p style='margin:10px 0 0;font-size:14px;color:#9ca3af;text-transform:capitalize;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;'>${dateStr}</p>\n      </td>\n    </tr>\n\n    <tr><td style='height:28px;'></td></tr>\n    <tr><td>${sectorsHtml}</td></tr>\n\n    <tr>\n      <td style='text-align:center;padding:28px 0;border-top:1px solid #e5e7eb;'>\n        <p style='margin:0;font-size:12px;color:#9ca3af;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;'>Generado autom\u00e1ticamente \u00b7 n8n + OpenRouter + Jina AI</p>\n      </td>\n    </tr>\n\n  </table>\n</td></tr>\n</table>\n</body>\n</html>`;\n\nreturn [{ json: { html_email: html, subject: 'Panfleto - ' + dateShort } }];"
+      },
+      "id": "pnfl-0009-0000-0000-000000000009",
+      "name": "Code - Constructor HTML",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [400, 200]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "toList": "TU_EMAIL@gmail.com",
+        "subject": "={{ $json.subject }}",
+        "emailType": "html",
+        "message": "={{ $json.html_email }}"
+      },
+      "id": "pnfl-0010-0000-0000-000000000010",
+      "name": "Gmail",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [600, 200]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [[{ "node": "Code - Inicializador", "type": "main", "index": 0 }]]
+    },
+    "Code - Inicializador": {
+      "main": [[{ "node": "HTTP - Reddit", "type": "main", "index": 0 }]]
+    },
+    "HTTP - Reddit": {
+      "main": [[{ "node": "Code - Procesador", "type": "main", "index": 0 }]]
+    },
+    "Code - Procesador": {
+      "main": [[{ "node": "HTTP - Jina AI", "type": "main", "index": 0 }]]
+    },
+    "HTTP - Jina AI": {
+      "main": [[{ "node": "Code - Merge Jina", "type": "main", "index": 0 }]]
+    },
+    "Code - Merge Jina": {
+      "main": [[{ "node": "AI Agent", "type": "main", "index": 0 }]]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [[{ "node": "AI Agent", "type": "ai_languageModel", "index": 0 }]]
+    },
+    "AI Agent": {
+      "main": [[{ "node": "Code - Constructor HTML", "type": "main", "index": 0 }]]
+    },
+    "Code - Constructor HTML": {
+      "main": [[{ "node": "Gmail", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Madrid",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": null
+}

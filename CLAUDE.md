@@ -22,6 +22,23 @@ Eres un Staff Engineer experto en n8n, Node.js y APIs. Tu objetivo es crear auto
 
 ## 🚀 Entorno Local y CI/CD
 * **Entorno:** n8n se ejecuta localmente usando OrbStack.
-* **Comando de arranque:**
-  `docker run -it --name n8n_tunnel -p 5678:5678 -e WEBHOOK_URL=https://riteless-angelic-chimbly.ngrok-free.app -v ~/.n8n:/home/node/.n8n docker.n8n.io/n8nio/n8n`
+* **Comando de arranque completo:**
+```bash
+docker run -d --name n8n_tunnel -p 5678:5678 \
+  -e WEBHOOK_URL=https://n8n.hellonode.es \
+  -e N8N_EDITOR_BASE_URL=http://localhost:5678 \
+  -e N8N_SECURE_COOKIE=false \
+  -e FIRECRAWL_API_KEY=FIRECRAWL_API_KEY_REDACTED \
+  -e SCRAPINGBEE_API_KEY=SCRAPINGBEE_API_KEY_REDACTED \
+  -v ~/.n8n:/home/node/.n8n \
+  docker.n8n.io/n8nio/n8n
+```
+* **Por qué cada variable:**
+  - `WEBHOOK_URL`: URL pública para que los webhooks externos funcionen via Cloudflare
+  - `N8N_EDITOR_BASE_URL`: fija el origen del OAuth callback a localhost (necesario para añadir credenciales OAuth)
+  - `N8N_SECURE_COOKIE=false`: permite acceder via `http://localhost:5678` sin HTTPS
+  - `FIRECRAWL_API_KEY` / `SCRAPINGBEE_API_KEY`: fallbacks de scraping para el workflow Panfleto
+* **Acceso:** Siempre usar `http://localhost:5678` (NO la URL de Cloudflare — el WAF bloquea peticiones de gestión)
+* **OAuth credentials:** Añadir `http://localhost:5678/rest/oauth2-credential/callback` en Google Cloud Console → OAuth 2.0 Client → Authorized redirect URIs
+* **API n8n:** Usar `http://localhost:5678/api/v1/` con header `X-N8N-API-KEY`
 * **Certificados:** Si alguna vez debes hacer un `fetch` a servicios internos de OrbStack (`.orb.local`), ignora la verificación SSL/TLS.

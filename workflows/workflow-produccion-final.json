@@ -1,0 +1,1159 @@
+{
+  "name": "shixin-technology",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -352,
+        -224
+      ],
+      "id": "3cdd031f-3803-46dd-b9e1-ed20a53fc628",
+      "name": "Telegram Trigger",
+      "webhookId": "GENERATE_NEW_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "OeWeiW3SErB1ahRu",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.photo[3].file_id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        -640
+      ],
+      "id": "f2985856-aa85-45aa-9367-c4399a0d80ec",
+      "name": "Get File from Telegram",
+      "webhookId": "324ba859-9b87-4356-8918-8c34252b3e99",
+      "credentials": {
+        "telegramApi": {
+          "id": "OeWeiW3SErB1ahRu",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "uploadFile",
+        "additionalFieldsFile": {
+          "upload_preset": ""
+        }
+      },
+      "type": "n8n-nodes-cloudinary.cloudinary",
+      "typeVersion": 1,
+      "position": [
+        976,
+        -848
+      ],
+      "id": "6ed0fc50-eee1-4186-8221-df53dafea7cb",
+      "name": "Upload an asset from file data",
+      "credentials": {
+        "cloudinaryApi": {
+          "id": "Mlo5R8STwi7hIteR",
+          "name": "Cloudinary account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "deepseek/deepseek-r1-distill-llama-70b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        336,
+        288
+      ],
+      "id": "6ca8139c-cc87-459d-b575-bba1239c16c4",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "OyQzAWXSBTIUwfwp",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a77a5d07-6de6-4e9f-a93b-29913bff0f40",
+              "name": "url_fondo_blanco",
+              "value": "={{ $json.secure_url.replace('/upload/', '/upload/e_background_removal,b_white,c_pad,w_1200,h_1200/').replace('.jpg', '.png') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1200,
+        -848
+      ],
+      "id": "6fb3f094-4914-4f85-a5a7-00c5fbbc2614",
+      "name": "Quitar Fondo"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url_fondo_blanco }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1424,
+        -848
+      ],
+      "id": "afd3f97d-023e-444f-b2bb-0274060e9513",
+      "name": "Convertir a Binary"
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "edit",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash-image",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash-image (Nano Banana)"
+        },
+        "prompt": "Transform this product photo into a professional product shots with a pure white background (RGB: 255,255,255). Generate Front view centered, must have: perfect white background, studio lighting with soft shadows, high contrast, professional e-commerce quality, 1K resolution, ultra-sharp details. Style: Clean product photography for online catalog.",
+        "images": {
+          "values": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        1648,
+        -848
+      ],
+      "id": "f4153793-09f2-4a97-9912-dedee87d5d59",
+      "name": "Edit an image",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "uhyYco4oggMGn9dd",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "deepseek/deepseek-r1-distill-llama-70b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        336,
+        624
+      ],
+      "id": "6e1b4d2b-8a10-45e0-9ded-2c9401866f5f",
+      "name": "OpenRouter Chat Model1",
+      "credentials": {
+        "openRouterApi": {
+          "id": "OyQzAWXSBTIUwfwp",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Actúa como un experto en hardware. Tu tarea es extraer y listar las especificaciones técnicas detalladas del producto: {{ $json.message.caption }}.\n\nREGLAS CRÍTICAS: 1. Devuelve DIRECTAMENTE la lista de especificaciones en bullet points. 2. Incluye detalles de: Procesador, RAM, Pantalla, Batería, Almacenamiento y Conectividad. 3. Prohibido responder con introducciones, saludos o consejos de búsqueda (ej: \"Para encontrar...\", \"Aquí tienes...\"). 4. Si no encuentras el dato exacto, usa tu conocimiento base para dar la información más precisa posible.",
+        "options": {
+          "passthroughBinaryImages": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        336,
+        112
+      ],
+      "id": "254d620b-406a-4b5c-b936-c1970bc24a05",
+      "name": "Características Técnicas"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Actúa como un Copywriter experto en E-commerce y SEO. Tu objetivo es redactar una descripción de producto persuasiva y optimizada para el producto: {{ $json.message.caption }}\n\nESTRUCTURA DE LA RESPUESTA: 1. Título optimizado: Atractivo, incluyendo marca, modelo y la característica principal. 2. Gancho (Hook): Un párrafo corto (2-3 líneas) que explique cómo este producto mejora la vida del usuario. 3. Características destacadas: Elige las 5 especificaciones más potentes y conviértelas en un formato \"Característica -> Beneficio\" (ej: \"Batería de 5000mAh -> Olvídate de cargar el dispositivo por días\"). 4. Ficha Técnica resumida: Una lista limpia con el resto de specs. 5. Llamado a la acción (CTA): Una frase final que invite a la compra.\n\nREGLAS DE ESTILO: - Usa un tono profesional pero cercano. - Utiliza emojis de forma moderada para facilitar la lectura. - Enfócate en la legibilidad (párrafos cortos y mucho espacio en blanco). - Evita palabras vacías como \"el mejor\" o \"increíble\", demuestra el valor con datos.",
+        "options": {
+          "passthroughBinaryImages": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        336,
+        448
+      ],
+      "id": "a0fcde7c-46f3-41ed-91ef-65b1355e0449",
+      "name": "Observacion Copywritter"
+    },
+    {
+      "parameters": {
+        "model": "deepseek/deepseek-r1-distill-llama-70b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        336,
+        -48
+      ],
+      "id": "10ed3b45-256b-4efe-9a26-40c7d3e1b2c5",
+      "name": "OpenRouter Chat Model2",
+      "credentials": {
+        "openRouterApi": {
+          "id": "OyQzAWXSBTIUwfwp",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analiza el siguiente mensaje de Telegram y extrae los datos: \n--- \n{{ $json.message.caption }}\n---\n\n### PERSONA Actúas como un extractor de datos especializado en gestión de inventarios. Tu objetivo es procesar mensajes de texto recibidos por Telegram y transformarlos en un objeto JSON estructurado para una base de datos de Google Sheets. \n\n### TAREA \n\n1. Analiza el mensaje del usuario. \n2. Identifica los campos definidos en el esquema. \n3. Responde únicamente con el objeto JSON puro. No uses bloques de código Markdown (```json) ni ninguna otra explicación.\n\n\n\n ### ESQUEMA DE SALIDA (JSON) Debes seguir este formato exacto:\n\n{\n  \"fecha\": \"2023-10-27\",\n  \"codigo\": \"6939119019419\",\n  \"nombre\": \"Teclado Mecánico RGB\",\n  \"feature\": \"Switch azul, Layout ES, Cable trenzado\",\n  \"observacion\": \"Caja ligeramente dañada en lote B\",\n  \"color\": \"Negro/RGB\",\n  \"estado\": \"Pendiente\",\n  \"categoria\": \"BATERÍAS DE PORTÁTIL\",\n  \"subcategoria\": \"ACER\",\n  \"existencias\": 50,\n  \"precio_base\": 45.00\n}\n\n### REGLAS\n\n— fecha: Siempre en formato YYYY-MM-DD. Dia de hoy.\n— codigo: String, código EAN. Asegurate que sean 13 cifras, en caso de que sea más corto, agrega ceros delante.\n— Feature y Observacion dejalo siempre vacio “”.\n— Color, rellenalo si lo encuentras, sino déjalo vacío\n— Estado, déjalo siempre en “Pendiente”\n— existencias: integer\n— precio_base: Tipo Float, con 2 decimales\n— No te inventes datos, en caso de que no lo encuentres, déjalo vacío\n— Rellena categoria y subcategoria de la mejor manera que puedas, en base a lo siguiente:\n\n{\n  \"ACCESORIOS DE CONSOLAS\": [\n    \"NINTENDO DS\",\n    \"NINTENDO Wii\",\n    \"PC\",\n    \"PLAY STATION\",\n    \"PSP\",\n    \"XBOX\"\n  ],\n  \"ACCESORIOS DE MÓVIL\": [\n    \"AROS DE LUZ\",\n    \"CABLE IPHONE 4 (30pins)\",\n    \"CABLE iPHONE LIGHTNING\",\n    \"CABLE MICRO USB\",\n    \"CABLE TIPO C\",\n    \"PALO SELFIE Y TRÍPODE\",\n    \"POWERBANKS\",\n    \"SOPORTE DE MÓVIL\",\n    \"OTROS ACCESORIOS\"\n  ],\n  \"ACCESORIOS PARA COCHE\": [\n    \"CARGADOR iPHONE 4\",\n    \"CARGADOR iPHONE LIGHTNING\",\n    \"CARGADOR MICRO USB\",\n    \"CARGADOR SIN CABLE\",\n    \"CARGADOR TIPO C\",\n    \"SOPORTE DE MÓVIL Y TABLET\",\n    \"TRANSMISOR FM\",\n    \"OTROS ACCESORIOS\"\n  ],\n  \"ALTAVOCES\": [\n    \"ALTAVOZ BLUETOOTH\",\n    \"ALTAVOZ CON KARAOKE\",\n    \"ALTAVOZ PC\"\n  ],\n  \"AURICULARES\": [\n    \"BOTON/ PEQUEÑOS\",\n    \"DEPORTIVAS BLUETOOTH\",\n    \"DIADEMA CON CABLE\",\n    \"DIADEMA INALÁMBRICO\",\n    \"MANOS LIBRES\",\n    \"TRUE WIRELESS STEREO (TWS)\"\n  ],\n  \"BATERÍAS DE PORTÁTIL\": [\n    \"ACER\",\n    \"APPLE\",\n    \"ASUS\",\n    \"DELL\",\n    \"FUJITSU\",\n    \"HP\",\n    \"IBM\",\n    \"LENOVO\",\n    \"MITAC\",\n    \"MSI\",\n    \"SAMSUNG\",\n    \"SONY\",\n    \"TOSHIBA\"\n  ],\n  \"CABLES\": [\n    \"ADAPTADORES\",\n    \"ALIMENTACIÓN\",\n    \"DISPLAYPORT\",\n    \"DVI\",\n    \"ETHERNET\",\n    \"HDMI\",\n    \"JACK\",\n    \"RCA\",\n    \"USB / IMPRESORA\",\n    \"VGA\",\n    \"OTROS ACCESORIOS\"\n  ],\n  \"CARGADOR DE MÓVIL\": [\n    \"BASE DE CARGA\",\n    \"CARGADOR iPHONE 4 (30pins)\",\n    \"CARGADOR iPHONE LIGHTNING\",\n    \"CARGADOR MICRO USB\",\n    \"CARGADOR SÓLO CABEZAL\",\n    \"CARGADOR TIPO C\",\n    \"OTROS ACCESORIOS\"\n  ],\n  \"CARGADOR DE PORTÁTIL\": [\n    \"CARGADOR DE IMPRESORA\",\n    \"CARGADOR PORTÁTIL ACER\",\n    \"CARGADOR PORTÁTIL APPLE\",\n    \"CARGADOR PORTÁTIL ASUS\",\n    \"CARGADOR PORTÁTIL DELL\",\n    \"CARGADOR PORTÁTIL FUJITSU\",\n    \"CARGADOR PORTÁTIL HP\",\n    \"CARGADOR PORTÁTIL LENOVO\",\n    \"CARGADOR PORTÁTIL SAMSUNG\",\n    \"CARGADOR PORTÁTIL SONY\",\n    \"CARGADOR PORTÁTIL TOSHIBA\",\n    \"CARGADOR PUERTO TIPO C\",\n    \"CARGADOR UNIVERSAL PORTÁTIL\"\n  ],\n  \"CARGADOR DE TABLET\": [\n    \"CARGADOR TABLET UNIVERSAL\",\n    \"TABLET ACER\",\n    \"TABLET MICROSOFT SURFACE\"\n  ],\n  \"CARTUCHOS DE TINTA\": [\n    \"BROTHER\",\n    \"CANON\",\n    \"EPSON\",\n    \"HP\",\n    \"LEXMARK\"\n  ],\n  \"TÓNER\": [\n    \"BROTHER\",\n    \"CANON\",\n    \"DELL\",\n    \"EPSON\",\n    \"HP\",\n    \"KONICA MINOLTA\",\n    \"KYOCERA\",\n    \"LEXMARK\",\n    \"OKI\",\n    \"RICOH\",\n    \"SAMSUNG\",\n    \"XEROX\"\n  ],\n  \"TAMBOR\": [\n    \"BROTHER\",\n    \"HP\",\n    \"KYOCERA\",\n    \"OKI\",\n    \"SAMSUNG\"\n  ],\n  \"FUNDAS / MALETINES\": [\n    \"CINTURÓN\",\n    \"FUNDA UNIVERSAL DE TABLET\",\n    \"IMPERMEABLE\",\n    \"MALETÍN DE PORTÁTIL\"\n  ],\n  \"PEQUEÑOS ELECTRODOMÉSTICOS\": [\n    \"MASAJEADORES\",\n    \"VENTILADOR\"\n  ],\n  \"PERIFÉRICOS INFORMÁTICA\": [\n    \"ALFOMBRILLA DE RATÓN\",\n    \"BASE REFRIGERADORA\",\n    \"CAJA DE DISCO DURO\",\n    \"HUB USB\",\n    \"IMPRESORAS\",\n    \"LECTOR DE TARJETA\",\n    \"RATONES\",\n    \"TECLADO\",\n    \"WEBCAM\"\n  ],\n  \"REDES\": [\n    \"ANTENA WIFI\",\n    \"BLUETOOTH\",\n    \"REPETIDOR WIFI\"\n  ],\n  \"SPORT ACCESORIOS\": [\n    \"BRAZALETE\",\n    \"RELOJ DEPORTIVO\",\n    \"RIÑONERA\"\n  ],\n  \"ZONA GAMING\": [\n    \"CASCOS GAMING\",\n    \"MESA GAMING\",\n    \"MICRÓFONO GAMING\",\n    \"RATONES GAMING\",\n    \"SILLA GAMING\",\n    \"SOPORTE DE CASCO\",\n    \"TECLADO GAMING\"\n  ]\n}\n",
+        "options": {
+          "passthroughBinaryImages": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        336,
+        -224
+      ],
+      "id": "45ec30e2-0323-476e-83ef-9de43907ec03",
+      "name": "Extracción datos"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Capturamos el texto sucio de la IA\nlet textoSucio = $input.first().json.output;\n\n// Limpiamos los bloques de código ```json y espacios sobrantes\nlet textoLimpio = textoSucio.replace(/```json|```/g, \"\").trim();\n\n// Ahora sí, lo convertimos en un objeto real\nreturn JSON.parse(textoLimpio);"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        752,
+        -224
+      ],
+      "id": "09da55aa-a6c4-44dc-aa17-1bd519d1839c",
+      "name": "Transformacion datos"
+    },
+    {
+      "parameters": {
+        "inputDataFieldName": "=edited",
+        "name": "={{ $json.fecha }}-{{ $json.nombre }}",
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive",
+          "cachedResultUrl": "https://drive.google.com/drive/my-drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1-FLrnCYV-Jncuks58dycjNeDR2J83k_8",
+          "mode": "list",
+          "cachedResultName": "Foto-productos",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1-FLrnCYV-Jncuks58dycjNeDR2J83k_8"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1392,
+        -240
+      ],
+      "id": "11a89dec-a50c-469b-81f6-d6ac5add51ea",
+      "name": "Guardar Imagen",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "7Te8pBGhMEDg4ZNB",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1200,
+        -240
+      ],
+      "id": "db973614-6686-4ac1-afb6-eb0ce0b333bb",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "operation": "share",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "permissionsUi": {
+          "permissionsValues": {
+            "role": "reader",
+            "type": "anyone"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1568,
+        -240
+      ],
+      "id": "f17c41b5-99bc-4792-b10f-e5ad8ec75e25",
+      "name": "Publicar Imagen",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "7Te8pBGhMEDg4ZNB",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1a4NzEeoyoFNUTKXoAsTBtdJyuNIfqHJ8DriXYfbM5vE",
+          "mode": "list",
+          "cachedResultName": "bbdd-shixin-technology",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1a4NzEeoyoFNUTKXoAsTBtdJyuNIfqHJ8DriXYfbM5vE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "bbdd",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1a4NzEeoyoFNUTKXoAsTBtdJyuNIfqHJ8DriXYfbM5vE/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Fecha": "={{ $('Transformacion datos').item.json.fecha }}",
+            "Codigo": "={{ $('Transformacion datos').item.json.codigo }}",
+            "Nombre": "={{ $('Transformacion datos').item.json.nombre }}",
+            "Feature": "={{ $json.output }}",
+            "Observacion": "={{ $json.output }}",
+            "Foto": "=https://lh3.googleusercontent.com/u/0/d/{{ $('Guardar Imagen').item.json.id }}",
+            "Color": "={{ $('Transformacion datos').item.json.color }}",
+            "Estado": "={{ $('Transformacion datos').item.json.estado }}",
+            "Categoria": "={{ $('Transformacion datos').item.json.categoria }}",
+            "Subcategoría": "={{ $('Transformacion datos').item.json.subcategoria }}",
+            "Existencias": "={{ $('Transformacion datos').item.json.existencias }}",
+            "Precio Base": "={{ $('Transformacion datos').item.json.precio_base }}"
+          },
+          "matchingColumns": [
+            "Codigo"
+          ],
+          "schema": [
+            {
+              "id": "Fecha",
+              "displayName": "Fecha",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Codigo",
+              "displayName": "Codigo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Nombre",
+              "displayName": "Nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Feature",
+              "displayName": "Feature",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Observacion",
+              "displayName": "Observacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Foto",
+              "displayName": "Foto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Color",
+              "displayName": "Color",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Estado",
+              "displayName": "Estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Categoria",
+              "displayName": "Categoria",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Subcategoría",
+              "displayName": "Subcategoría",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Existencias",
+              "displayName": "Existencias",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Precio Base",
+              "displayName": "Precio Base",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1760,
+        112
+      ],
+      "id": "50feee7e-ef8f-4bf3-bad0-08cd09b3fd64",
+      "name": "Actualizar Inventario",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "q0OuH7EdAGQn86Vt",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "numberInputs": 3,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1568,
+        96
+      ],
+      "id": "4d6f5cfb-3c45-4117-92cf-49cd3b3bd74d",
+      "name": "Merge 2"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "=✅ **Producto registrado exitosamente**\n\n🏷️ **Codigo:** {{ $('Transformacion datos').item.json.codigo }}\n📦 **Nombre:** {{ $('Transformacion datos').item.json.nombre }}\n---\n📃 **Sheet:** https://docs.google.com/spreadsheets/d/1a4NzEeoyoFNUTKXoAsTBtdJyuNIfqHJ8DriXYfbM5vE/edit?usp=sharing\n---\n🌄 **Imagen:** {{ $json.Foto }}\n\n",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1968,
+        112
+      ],
+      "id": "cd755e46-fdad-4f6c-b628-d237e1797b47",
+      "name": "Send a text message",
+      "webhookId": "80f5acbb-de08-496a-84d0-aaa851aabb66",
+      "credentials": {
+        "telegramApi": {
+          "id": "OeWeiW3SErB1ahRu",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "google/gemma-3-12b-it:free",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        336,
+        -464
+      ],
+      "id": "b7c33455-a681-4969-8818-035ab4aa2659",
+      "name": "OpenRouter Chat Model3",
+      "credentials": {
+        "openRouterApi": {
+          "id": "OyQzAWXSBTIUwfwp",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analiza esta imagen. ¿Tiene un fondo blanco puro apto para marketplace? Responde únicamente con la palabra 'SI' o la palabra 'NO'.",
+        "options": {
+          "passthroughBinaryImages": true
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        336,
+        -640
+      ],
+      "id": "963fc0b7-cb27-4e4f-97cc-37e27822b6b7",
+      "name": "Análisis de imagen"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "1dac6143-4a94-481e-9a12-652030bd40db",
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "NO",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        752,
+        -640
+      ],
+      "id": "43f04ecc-e986-4378-8e29-af0030868254",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "mode": "chooseBranch"
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1200,
+        -640
+      ],
+      "id": "5133a2a4-8a2f-403f-93a3-f485d23d8606",
+      "name": "Merge Image"
+    },
+    {
+      "parameters": {
+        "content": "## Manipulación Imagen",
+        "height": 640,
+        "width": 2208,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -48,
+        -944
+      ],
+      "id": "1a41cb7d-6a1e-4dfc-b8b6-1ea6cff503ba",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "content": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n## Manipulación Texto",
+        "height": 1056,
+        "width": 1040,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -48,
+        -288
+      ],
+      "id": "c1e4be4b-3496-4763-bd4b-654d4e98e4a1",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "content": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n## Output Salida",
+        "height": 1056,
+        "width": 1152,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1008,
+        -288
+      ],
+      "id": "995c1866-40ab-4e7f-a820-84d45c56cd8a",
+      "name": "Sticky Note8"
+    }
+  ],
+  "pinData": {
+    "Telegram Trigger": [
+      {
+        "json": {
+          "update_id": 281308667,
+          "message": {
+            "message_id": 8,
+            "from": {
+              "id": 6822665740,
+              "is_bot": false,
+              "first_name": "Xingyao",
+              "last_name": "Pan",
+              "language_code": "es"
+            },
+            "chat": {
+              "id": 6822665740,
+              "first_name": "Xingyao",
+              "last_name": "Pan",
+              "type": "private"
+            },
+            "date": 1770586725,
+            "photo": [
+              {
+                "file_id": "AgACAgQAAxkBAAMDaYjiSLqY5SfvkP7LqYkjM0eLc1MAAqwOaxvSqEBQvlfd-8PYdF8BAAMCAANzAAM6BA",
+                "file_unique_id": "AQADrA5rG9KoQFB4",
+                "file_size": 1281,
+                "width": 67,
+                "height": 90
+              },
+              {
+                "file_id": "AgACAgQAAxkBAAMDaYjiSLqY5SfvkP7LqYkjM0eLc1MAAqwOaxvSqEBQvlfd-8PYdF8BAAMCAANtAAM6BA",
+                "file_unique_id": "AQADrA5rG9KoQFBy",
+                "file_size": 14816,
+                "width": 240,
+                "height": 320
+              },
+              {
+                "file_id": "AgACAgQAAxkBAAMDaYjiSLqY5SfvkP7LqYkjM0eLc1MAAqwOaxvSqEBQvlfd-8PYdF8BAAMCAAN4AAM6BA",
+                "file_unique_id": "AQADrA5rG9KoQFB9",
+                "file_size": 63685,
+                "width": 600,
+                "height": 800
+              },
+              {
+                "file_id": "AgACAgQAAxkBAAMDaYjiSLqY5SfvkP7LqYkjM0eLc1MAAqwOaxvSqEBQvlfd-8PYdF8BAAMCAAN5AAM6BA",
+                "file_unique_id": "AQADrA5rG9KoQFB-",
+                "file_size": 79378,
+                "width": 960,
+                "height": 1280
+              }
+            ],
+            "caption": "BOOX Tab X C"
+          }
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ],
+    "Upload an asset from file data": [
+      {
+        "json": {
+          "asset_id": "b6f79414843525691f60c1166033bfbd",
+          "public_id": "lixkt2pras0ewxgmdrjx",
+          "version": 1770588465,
+          "version_id": "819b7d7a0084f6223690e32aa5a43630",
+          "signature": "3dccec7d5ee3961b4a5d934a58a2e45d4f3e33c0",
+          "width": 960,
+          "height": 1280,
+          "format": "jpg",
+          "resource_type": "image",
+          "created_at": "2026-02-08T22:07:45Z",
+          "tags": [],
+          "bytes": 79378,
+          "type": "upload",
+          "etag": "152fa0eb80e85f1de18c6290020c6738",
+          "placeholder": false,
+          "url": "http://res.cloudinary.com/dugwx9fuc/image/upload/v1770588465/lixkt2pras0ewxgmdrjx.jpg",
+          "secure_url": "https://res.cloudinary.com/dugwx9fuc/image/upload/v1770588465/lixkt2pras0ewxgmdrjx.jpg",
+          "asset_folder": "",
+          "display_name": "lixkt2pras0ewxgmdrjx",
+          "original_filename": "file_1",
+          "api_key": "566616661634796"
+        },
+        "pairedItem": 0
+      }
+    ],
+    "Edit an image": [
+      {
+        "json": {
+          "mimeType": "image/png",
+          "fileType": "image",
+          "fileExtension": "png",
+          "fileName": "image.png",
+          "id": "filesystem-v2:workflows/ZfCRlVq2RPOCO-9CFOzRh/executions/79/binary_data/70be5022-9114-4d9e-afc2-e3c117e9c93c",
+          "fileSize": "1.07 MB",
+          "bytes": 1072854
+        },
+        "binary": {
+          "edited": {
+            "mimeType": "image/png",
+            "fileType": "image",
+            "fileExtension": "png",
+            "data": "filesystem-v2",
+            "fileName": "image.png",
+            "id": "filesystem-v2:workflows/ZfCRlVq2RPOCO-9CFOzRh/executions/79/binary_data/70be5022-9114-4d9e-afc2-e3c117e9c93c",
+            "fileSize": "1.07 MB",
+            "bytes": 1072854
+          }
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ],
+    "Características Técnicas": [
+      {
+        "json": {
+          "output": "- **Procesador**: Qualcomm Snapdragon 870  \n- **RAM**: 8GB o 12GB  \n- **Pantalla**: E Ink de 13.3 pulgadas con resolución de 2200 × 1650 píxeles  \n- **Batería**: 5500mAh  \n- **Almacenamiento**: 128GB o 256GB internos, expandible via microSD hasta 512GB  \n- **Conectividad**: Wi-Fi 6, Bluetooth 5.0/5.1, USB Type-C, conector para auriculares"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ],
+    "Observacion Copywritter": [
+      {
+        "json": {
+          "output": "**Título optimizado:** BOOX Tab X C: La tableta eReader con una pantalla impresionante y rendimiento excepcional 📖💻\n\n**Gancho (Hook):**  \nDescubre la libertad de leer sin límites con la BOOX Tab X C. Diseñada para amantes de los libros, esta tableta eReader combina una pantalla de alta calidad con un rendimiento potente, convirtiendo cada momento de lectura en una experiencia única y sin interrupciones.\n\n**Características destacadas:**  \n- **Pantalla HD de 10.3 pulgadas** -> Disfruta de textos nítidos y colores vivos, ideales para una lectura cómoda y agradable.  \n- **Procesador octa-core** -> Navega, lee y ejecuta aplicaciones con rapidez y suavidad.  \n- **Batería de larga duración** -> Olvídate de cargar durante días, perfecta para sesiones de lectura prolongadas.  \n- **Almacenamiento expandible** -> Guarda cientos de libros y documentos con opción de expandir la memoria.  \n- **Diseño ligero y portable** -> Lleva tu biblioteca contigo sin esfuerzo, gracias a su peso reducido.  \n\n**Ficha Técnica resumida:**  \n- Sistema Operativo: Android 11  \n- Conectividad: Wi-Fi y Bluetooth  \n- Dimensiones: 245 x 184 x 7.5 mm  \n- Peso: 500 gramos  \n\n**Llamado a la acción (CTA):**  \n¡Transforma tu experiencia de lectura! Compra ahora la BOOX Tab X C y lleva la comodidad de leer a otro nivel 📚✨"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ],
+    "Extracción datos": [
+      {
+        "json": {
+          "output": "```json\n{\n  \"fecha\": \"2023-10-27\",\n  \"codigo\": \"0\",\n  \"nombre\": \"BOOX Tab X C\",\n  \"feature\": \"\",\n  \"observacion\": \"\",\n  \"color\": \"\",\n  \"estado\": \"Pendiente\",\n  \"categoria\": \"PERIFÉRICOS INFORMÁTICA\",\n  \"subcategoria\": \"OTROS ACCESORIOS\",\n  \"existencias\": 0,\n  \"precio_base\": 0.00\n}\n```"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ],
+    "Get File from Telegram": [
+      {
+        "json": {
+          "ok": true,
+          "result": {
+            "file_id": "AgACAgQAAxkBAAMDaYjiSLqY5SfvkP7LqYkjM0eLc1MAAqwOaxvSqEBQvlfd-8PYdF8BAAMCAAN5AAM6BA",
+            "file_unique_id": "AQADrA5rG9KoQFB-",
+            "file_size": 79378,
+            "file_path": "photos/file_1.jpg"
+          }
+        },
+        "binary": {
+          "data": {
+            "mimeType": "image/jpeg",
+            "fileType": "image",
+            "fileExtension": "jpg",
+            "data": "filesystem-v2",
+            "fileName": "file_1.jpg",
+            "id": "filesystem-v2:workflows/ZfCRlVq2RPOCO-9CFOzRh/executions/115/binary_data/055b808e-0727-4623-a778-8ecd4d68d062",
+            "fileSize": "79.4 kB",
+            "bytes": 79378
+          }
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ],
+    "Análisis de imagen": [
+      {
+        "json": {
+          "output": "NO"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get File from Telegram",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Características Técnicas",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Observacion Copywritter",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Extracción datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get File from Telegram": {
+      "main": [
+        [
+          {
+            "node": "Upload an asset from file data",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Análisis de imagen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload an asset from file data": {
+      "main": [
+        [
+          {
+            "node": "Quitar Fondo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Características Técnicas",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quitar Fondo": {
+      "main": [
+        [
+          {
+            "node": "Convertir a Binary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convertir a Binary": {
+      "main": [
+        [
+          {
+            "node": "Edit an image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit an image": {
+      "main": [
+        [
+          {
+            "node": "Merge Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Observacion Copywritter",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Extracción datos",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extracción datos": {
+      "main": [
+        [
+          {
+            "node": "Transformacion datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transformacion datos": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Características Técnicas": {
+      "main": [
+        [
+          {
+            "node": "Merge 2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Observacion Copywritter": {
+      "main": [
+        [
+          {
+            "node": "Merge 2",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Guardar Imagen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar Imagen": {
+      "main": [
+        [
+          {
+            "node": "Publicar Imagen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Actualizar Inventario": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Publicar Imagen": {
+      "main": [
+        [
+          {
+            "node": "Merge 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge 2": {
+      "main": [
+        [
+          {
+            "node": "Actualizar Inventario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Análisis de imagen",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Análisis de imagen": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Upload an asset from file data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge Image",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Image": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "33517b83-ca60-4163-a013-bb5176e4dc49",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2f7d978a68144d80706c24db4d02157b5aed1db8346ae16dc7360c37518e1f7b"
+  },
+  "id": "ZfCRlVq2RPOCO-9CFOzRh",
+  "tags": []
+}

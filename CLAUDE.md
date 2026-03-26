@@ -28,7 +28,7 @@ docker run -d --name n8n_tunnel -p 5678:5678 \
   -e WEBHOOK_URL=https://n8n.hellonode.es \
   -e N8N_EDITOR_BASE_URL=http://localhost:5678 \
   -e N8N_SECURE_COOKIE=false \
-  --env-file .env \
+  --env-file ~/vscode/.env \
   -v ~/.n8n:/home/node/.n8n \
   docker.n8n.io/n8nio/n8n
 ```
